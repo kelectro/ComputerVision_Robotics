@@ -1,0 +1,255 @@
+
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <iostream>
+#include <opencv2/tracking.hpp>
+#include <dirent.h> // for linux systems
+#include <sys/stat.h> // for linux systems
+#include <vector>
+
+#include <chrono>  // for high_resolution_clock
+
+
+using namespace cv;
+using namespace std;
+
+
+
+int readFilenames(vector<string> &filenames, const string &directory)
+    {
+        DIR *dir;
+        class dirent *ent;
+        class stat st;
+
+        dir = opendir(directory.c_str());
+        while ((ent = readdir(dir)) != NULL) {
+            const string file_name = ent->d_name;
+            const string full_file_name = directory + "/" + file_name;
+
+            if (file_name[0] == '.')
+                continue;
+
+            if (stat(full_file_name.c_str(), &st) == -1)
+                continue;
+
+            const bool is_directory = (st.st_mode & S_IFDIR) != 0;
+
+            if (is_directory)
+                continue;
+
+    //      filenames.push_back(full_file_name); // returns full path
+            filenames.push_back(file_name); // returns just filename
+        }
+        closedir(dir);
+           std::sort (filenames.begin(), filenames.end()); //optional, sort the filenames
+        return(filenames.size()); //Return how many we found
+    } // GetFilesInDirectory
+
+void marker1_easy(Mat& img)
+{
+    // Record start time
+   // auto start = std::chrono::high_resolution_clock::now();
+    Mat red;
+    Mat blue;
+    Mat hsv;
+    Mat bin,bin2,blue1;
+    namedWindow("original",CV_WINDOW_NORMAL);
+    imshow("original",img);
+
+
+    //convert to hsv color space
+    cvtColor(img,hsv,COLOR_BGR2HSV);
+    //separate blue and red circles in our image
+    //thressholding using inrange function
+    inRange(hsv, Scalar(0, 70, 50), Scalar(10,255,255), red);
+    inRange(hsv, Scalar(111, 70, 50), Scalar(130,255,255), blue);
+
+    // Erode+dilate to fill holes
+
+   Mat kernel = Mat::ones(7, 7, CV_8U);
+   dilate(blue, blue, kernel);
+   erode(red, red, kernel);
+   erode(blue,blue,kernel);
+   erode(blue,blue,kernel);
+   //imshow("Binary image", bin);
+       Mat out=red | blue;
+     imshow("out",out);
+    //imshow("red",red);
+    //imshow("blue  ",blue);
+       Mat original=img.clone();
+
+     GaussianBlur( out, red, Size(9, 9), 2, 2 );
+
+      vector<Vec3f>circles;
+      vector<Point>coordinates;
+      vector<Vec3f>coordx;
+      vector<Vec3f>coordy;
+      vector<Vec3f>jacobi;
+      /// Apply the Hough Transform to find the circles
+      HoughCircles( red, circles, CV_HOUGH_GRADIENT, 1, red.rows/8, 80, 20, 0, 0 );
+
+      /// Draw the circles detected
+      for( size_t j = 0; j < circles.size(); j++ )
+      {
+          Point center(cvRound(circles[j][0]), cvRound(circles[j][1]));
+          int radius = cvRound(circles[j][2]);
+          // circle center
+          circle( original, center, 3, Scalar(0,255,0), -1, 8, 0 );
+          cout<<center<<endl;
+          coordinates.push_back(center);
+
+          // circle outline
+          circle( original, center, radius, Scalar(0,0,255), 3, 8, 0 );
+          //cout<<radius<<endl;
+
+
+         }
+      // Record end time
+      //auto finish = std::chrono::high_resolution_clock::now();
+     // std::chrono::duration<double> elapsed = finish - start;
+     // std::cout << "Elapsed time: " << elapsed.count() << " s\n";
+      namedWindow( "Hough Circle Transform ", CV_WINDOW_AUTOSIZE );
+      imshow( "Hough Circle Transform ", original );
+}
+
+void marker1_hard(Mat& img)
+{
+
+
+    // Record start time
+    auto start = std::chrono::high_resolution_clock::now();
+    Mat red;
+    Mat blue;
+    Mat hsv;
+    Mat bin,bin2,blue1;
+    namedWindow("original",CV_WINDOW_NORMAL);
+    imshow("original",img);
+
+
+    //convert to hsv color space
+    cvtColor(img,hsv,COLOR_BGR2HSV);
+    //separate blue and red circles in our image
+    //thressholding using inrange function
+    inRange(hsv, Scalar(0, 70, 50), Scalar(10,255,255), red);
+    //inRange(hsv, Scalar(160, 70, 50), Scalar(180, 255, 255), bin);
+    inRange(hsv, Scalar(100, 70, 50), Scalar(130,255,255), blue);
+    namedWindow("red",WINDOW_NORMAL);
+    imshow("red",red);
+    namedWindow("blue",WINDOW_NORMAL);
+    imshow("blue",blue);
+
+    // Erode+dilate to fill holes
+
+   Mat kernel = Mat::ones(7, 7, CV_8U);
+   dilate(blue, blue, kernel);
+   erode(red, red, kernel);
+   erode(blue,blue,kernel);
+   erode(blue,blue,kernel);
+   //imshow("Binary image", bin);
+       Mat out=red | blue;
+     imshow("out",out);
+    //imshow("red",red);
+    //imshow("blue  ",blue);
+       Mat original=img.clone();
+     GaussianBlur( out, out, Size(9, 9), 2, 2 );
+      Mat cont=out.clone();
+      vector<Vec3f>circles;
+      vector<Point>coordinates;
+      vector<Vec3f>coordx;
+      vector<Vec3f>coordy;
+      vector<Vec3f>jacobi;
+      /// Apply the Hough Transform to find the circles
+      HoughCircles( out, circles, CV_HOUGH_GRADIENT, 1, out.rows/12, 80, 20, 45,61 );
+
+      /// Draw the circles detected
+      for( size_t j = 0; j < circles.size(); j++ )
+      {
+          Point center(cvRound(circles[j][0]), cvRound(circles[j][1]));
+          int radius = cvRound(circles[j][2]);
+          // circle center
+          circle( original, center, 3, Scalar(0,255,0), -1, 8, 0 );
+          cout<<center<<endl;
+          coordinates.push_back(center);
+
+          // circle outline
+          circle( original, center, radius, Scalar(0,0,255), 3, 8, 0 );
+          cout<<radius<<endl;
+
+
+         }
+
+      // Find contours
+      vector<std::vector<cv::Point>> contours;
+      vector<cv::Vec4i> hierarchy;
+      findContours(cont, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
+
+      // Draw the contours which have an area within certain limits
+      Mat drawing =Mat::zeros(cont.size(), CV_8UC1);
+      drawContours(drawing, contours, -1, cv::Scalar::all(255));
+      auto finish = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> elapsed = finish - start;
+      std::cout << "Elapsed time: " << elapsed.count() << " s\n";
+      imshow("Contours", drawing);
+
+      namedWindow( "Hough Circle Transform ", CV_WINDOW_AUTOSIZE );
+      imshow( "Hough Circle Transform ", original );
+}
+
+
+
+    int main( int argc, const char** argv )
+    {
+        //*****easy****
+        string folder="/home/student/Desktop/rovi_final/marker_color/";
+        //****hard***
+     //  string folder="/home/student/Desktop/rovi_final/marker_color_hard/";
+        cout << "Reading in directory " << folder << endl;
+        vector<string> filenames;
+
+        int num_files = readFilenames(filenames, folder);
+        cout << "Number of files = " << num_files << endl;
+         namedWindow( "image", 1 );
+        for(size_t i = 0; i < filenames.size(); ++i)
+        {
+            cout << folder + filenames[i] << " #" << i << endl;
+            Mat img =imread(folder + filenames[i]);
+
+            if(!img.data) { //Protect against no file
+                cerr << folder + filenames[i] << ", file #" << i << ", is not an image" << endl;
+                continue;
+            }
+
+             marker1_easy(img);
+           // marker1_hard(img);
+              /*
+
+                 for(int k=0;k<coordinates.capacity();k++)
+                {
+                     coordx.push_back(coordinates[k].y);
+                     coordy.push_back(coordinates[k].y);
+                     //cout<<"point x\t"<<coordinates[k].x<<endl;
+                     cout<<"point y\t"<<coordinates[k].y<<endl;
+
+                     //cout<<"y coord"<<coordy<<endl;
+                     jacobi[k][0].push_back((coordx[3]-coordx[0])/2);
+                }
+
+/*
+                 for(int f=0;f<2;f++)
+                 {
+                    jacobi[f][0]=coordx[3]-coordx[0];
+                    jacobi[f][1]=coordy[1]-coordx[0];
+
+                 }
+                 */
+                //cout<<"vector"<<coordinates<<endl;
+              /// Show your results
+
+
+            cv::waitKey(200); //For fun, wait 250ms, or a quarter of a second, but you can put in "0" for no wait or -1 to wait for keypresses
+            /* do whatever you want with your images here */
+      }
+        }
+
+
+
