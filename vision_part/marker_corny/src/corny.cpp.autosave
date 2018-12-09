@@ -122,10 +122,6 @@ int main( int argc, const char** argv )
 
                 // Construct matcher
                 cv::Ptr<cv::DescriptorMatcher> matcher;
-
-
-
-
                  matcher = cv::FlannBasedMatcher::create();
 
 
