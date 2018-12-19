@@ -1,3 +1,0 @@
-/home/student/Desktop/rovi_final/build/CMakeFiles/rebuild_cache.dir
-/home/student/Desktop/rovi_final/build/CMakeFiles/RoVi1PluginPA10.dir
-/home/student/Desktop/rovi_final/build/CMakeFiles/edit_cache.dir
